@@ -1,0 +1,71 @@
+---
+# This playbook prepares a basic CentOS environment for hadoop cluster
+
+- name: Shutdown firewalld
+  systemd:
+    name: firewalld
+    state: stopped
+    enabled: no
+
+- name: Disable SELinux
+  selinux:
+    state: disabled
+
+- name: Change hosts name
+  hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Add mappings to /etc/hosts
+  blockinfile:
+    path: /etc/hosts
+    block: {{ item.ip }} {{ item.name }} {{ item.short_name }}
+    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.short_name }}"
+  loop:
+    - { ip: 192.168.33.101, name: node01.bigdata.com, short_name: node01 }
+    - { ip: 192.168.33.102, name: node02.bigdata.com, short_name: node02 }
+    - { ip: 192.168.33.103, name: node03.bigdata.com, short_name: node03 }
+
+- name: Ensure ntpd installed
+  yum:
+    name: ntp
+    state: installed
+
+- name: Sync Clock through Internet
+  cron:
+    name: sync with ntp every minute
+    minute: "*/1"
+    hour: "*"
+    day: "*"
+    month: "*"
+    weekday: "*"
+    job: "/usr/sbin/ntpdate ntp4.aliyun.com"
+
+- name: Add the user 'hadoop' and generate SSH key
+  user:
+    name: hadoop
+    password: "123456"
+    group: hadoop
+    generate_ssh_key: yes
+
+- name: Create /bigdata/soft and /bigdata/install
+  file:
+    path: {{ item }}
+    state: directory
+    owner: hadoop
+    group: hadoop
+    recurse: yes
+  loop:
+    - { /bigdata/soft }
+    - { /bigdata/install }
+
+- name: Ensure passwordless login of user hadoop
+  become: yes
+  become_user: hadoop
+  command: ssh-copy-id node01
+
+# TODO
+- name: Copy public key on node01 to node02 and node03
+  become: yes
+  become_user: hadoop
+  command: "scp /home/hadoop/.ssh/authorized_keys node02:/home/hadoop/.ssh/autorized_keys"
+  

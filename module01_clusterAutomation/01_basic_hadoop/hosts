@@ -1,0 +1,4 @@
+[hadoop_nodes]
+node01.bigdata.com ansible_host=192.168.33.101 ansible_ssh_port=22 ansible_ssh_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/node01/virtualbox/private_key
+node02.bigdata.com ansible_host=192.168.33.102 ansible_ssh_port=22 ansible_ssh_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/node02/virtualbox/private_key
+node03.bigdata.com ansible_host=192.168.33.103 ansible_ssh_port=22 ansible_ssh_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/node03/virtualbox/private_key
