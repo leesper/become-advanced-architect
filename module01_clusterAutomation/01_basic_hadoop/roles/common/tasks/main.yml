@@ -68,8 +68,8 @@
     group: hadoop
     recurse: yes
   loop:
-    - { /bigdata/soft }
-    - { /bigdata/install }
+    - "/bigdata/soft" 
+    - "/bigdata/install" 
 
 - name: Config sshd
   lineinfile:
@@ -101,40 +101,30 @@
     - node02
     - node03
 
-# - name: Check that JDK exists
-#   become: yes
-#   become_user: hadoop
-#   stat:
-#     path: /bigdata/soft/jdk-8u141-linux-x64.tar.gz
-#   register: stat_rs
+- name: Copy jdk tarball to /bigdata/soft
+  copy:
+    src: ../../../jdk-8u141-linux-x64.tar.gz
+    dest: /bigdata/soft
+    owner: hadoop
+    group: hadoop
 
-# - name: Download JDK when not exists
-#   become: yes
-#   become_user: hadoop
-#   command: "wget -q -O /bigdata/soft --no-check-certificate --no-cookies --header 'Cookie: oraclelicense=accept-securebackup-cookie' http://download.oracle.com/otn-pub/java/jdk/8u201-b09/jdk-8u141-linux-x64.tar.gz creates=/bigdata/soft"
-#   when: not stat_rs.stat.exists
+- name: Extract JDK to /bigdata/install
+  unarchive:
+    src: /bigdata/soft/jdk-8u141-linux-x64.tar.gz
+    remote_src: yes
+    dest: /bigdata/install
+    owner: hadoop
+    group: hadoop
 
-# - name: Extract JDK to /bigdata/install
-#   become: yes
-#   become_user: hadoop
-#   unarchive:
-#     src: /bigdata/soft/jdk-8u141-linux-x64.tar.gz
-#     dest: /kkb/install
-#     owner: hadoop
-#     group: hadoop
+- name: Configure JDK environment
+  blockinfile:
+    path: /etc/profile
+    block: |
+      export JAVA_HOME=/bigdata/install/jdk1.8.0_141
+      export PATH=$PATH:$JAVA_HOME/bin
 
-# - name: Configure JDK environment
-#   blockinfile:
-#     path: /etc/profile
-#     block: |
-#       export JAVA_HOME=/bigdata/install/jdk1.8.0_141
-#       export PATH=$PATH:$JAVA_HOME/bin
-
-# - name: Make immediate effect
-#   command: source /etc/profile
-
-# - name: Reboot all machines
-#   reboot:
+- name: Reboot all machines
+  reboot:
 
 
   
