@@ -18,7 +18,7 @@
 - name: Add mappings to /etc/hosts
   blockinfile:
     path: /etc/hosts
-    block: {{ item.ip }} {{ item.name }} {{ item.short_name }}
+    block: "{{ item.ip }} {{ item.name }} {{ item.short_name }}"
     marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.short_name }}"
   loop:
     - { ip: 192.168.33.101, name: node01.bigdata.com, short_name: node01 }
@@ -40,16 +40,29 @@
     weekday: "*"
     job: "/usr/sbin/ntpdate ntp4.aliyun.com"
 
+- name: Ensure 'hadoop' group exists
+  group:
+    name: hadoop
+    state: present
+
 - name: Add the user 'hadoop' and generate SSH key
   user:
     name: hadoop
-    password: "123456"
+    # ansible all -i localhost, -m debug -a "msg={{ '123456' | password_hash('sha512', 'mysecretsalt') }}"
+    password: $6$mysecretsalt$ZB9R8AirQYAXhtfhOo2qdJz52FyNI6v3L6Uc3KNRP.arBKIYpcuEyQewT5qBAHoyQFwHkW6Z551Ql.cZ53GeY0
     group: hadoop
     generate_ssh_key: yes
 
+- name: Make user 'hadoop' sudoer
+  lineinfile:
+    dest: /etc/sudoers
+    state: present
+    regexp: '^hadoop'
+    line: 'hadoop ALL=(ALL) NOPASSWD: ALL'
+
 - name: Create /bigdata/soft and /bigdata/install
   file:
-    path: {{ item }}
+    path: "{{ item }}"
     state: directory
     owner: hadoop
     group: hadoop
@@ -58,54 +71,70 @@
     - { /bigdata/soft }
     - { /bigdata/install }
 
+- name: Config sshd
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^PasswordAuthentication"
+    line: "PasswordAuthentication yes"
+
+- name: Restart sshd
+  service:
+    name: sshd
+    state: restarted
+
+- name: Ensure sshpass installed
+  yum:
+    name: sshpass
+    state: installed
+
 - name: Ensure passwordless login of user hadoop
   become: yes
   become_user: hadoop
-  command: ssh-copy-id node01
+  command: sshpass -p "123456" ssh-copy-id -o StrictHostKeyChecking=no node01
 
 - name: Copy public key on node01 to node02 and node03
   become: yes
   become_user: hadoop
-  command: "scp /home/hadoop/.ssh/authorized_keys {{ item }}:/home/hadoop/.ssh/"
-  when: {{ inventory_hostname }} == "node01.bigdata.com"
+  command: "sshpass -p '123456' scp -o StrictHostKeyChecking=no /home/hadoop/.ssh/authorized_keys {{ item }}:/home/hadoop/.ssh/"
+  when: "inventory_hostname == 'node01.bigdata.com'"
   loop:
     - node02
     - node03
 
-- name: Check that JDK exists
-  become: yes
-  become_user: hadoop
-  stat:
-    path: /bigdata/soft/jdk-8u141-linux-x64.tar.gz
-  register: stat_rs
+# - name: Check that JDK exists
+#   become: yes
+#   become_user: hadoop
+#   stat:
+#     path: /bigdata/soft/jdk-8u141-linux-x64.tar.gz
+#   register: stat_rs
 
-- name: Download JDK when not exists
-  become: yes
-  become_user: hadoop
-  command: "wget -q -O /bigdata/soft --no-check-certificate --no-cookies --header 'Cookie: oraclelicense=accept-securebackup-cookie' http://download.oracle.com/otn-pub/java/jdk/8u201-b09/jdk-8u141-linux-x64.tar.gz creates=/bigdata/soft"
-  when: not stat_rs.stat.exists
+# - name: Download JDK when not exists
+#   become: yes
+#   become_user: hadoop
+#   command: "wget -q -O /bigdata/soft --no-check-certificate --no-cookies --header 'Cookie: oraclelicense=accept-securebackup-cookie' http://download.oracle.com/otn-pub/java/jdk/8u201-b09/jdk-8u141-linux-x64.tar.gz creates=/bigdata/soft"
+#   when: not stat_rs.stat.exists
 
-- name: Extract JDK to /bigdata/install
-  become: yes
-  become_user: hadoop
-  unarchive:
-    src: /bigdata/soft/jdk-8u141-linux-x64.tar.gz
-    dest: /kkb/install
-    owner: hadoop
-    group: hadoop
+# - name: Extract JDK to /bigdata/install
+#   become: yes
+#   become_user: hadoop
+#   unarchive:
+#     src: /bigdata/soft/jdk-8u141-linux-x64.tar.gz
+#     dest: /kkb/install
+#     owner: hadoop
+#     group: hadoop
 
-- name: Configure JDK environment
-  blockinfile:
-    path: /etc/profile
-    block: |
-      export JAVA_HOME=/bigdata/install/jdk1.8.0_141
-      export PATH=$PATH:$JAVA_HOME/bin
+# - name: Configure JDK environment
+#   blockinfile:
+#     path: /etc/profile
+#     block: |
+#       export JAVA_HOME=/bigdata/install/jdk1.8.0_141
+#       export PATH=$PATH:$JAVA_HOME/bin
 
-- name: Make immediate effect
-  command: source /etc/profile
+# - name: Make immediate effect
+#   command: source /etc/profile
 
-- name: Reboot all machines
-  reboot:
+# - name: Reboot all machines
+#   reboot:
 
 
   
