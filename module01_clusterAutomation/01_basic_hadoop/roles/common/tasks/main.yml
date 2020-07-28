@@ -51,7 +51,6 @@
     # ansible all -i localhost, -m debug -a "msg={{ '123456' | password_hash('sha512', 'mysecretsalt') }}"
     password: $6$mysecretsalt$ZB9R8AirQYAXhtfhOo2qdJz52FyNI6v3L6Uc3KNRP.arBKIYpcuEyQewT5qBAHoyQFwHkW6Z551Ql.cZ53GeY0
     group: hadoop
-    generate_ssh_key: yes
 
 - name: Make user 'hadoop' sudoer
   lineinfile:
@@ -71,7 +70,12 @@
     - "/bigdata/soft" 
     - "/bigdata/install" 
 
-- name: Config sshd
+- name: Generate SSH key for hadoop on each machines
+  become: yes
+  become_user: hadoop
+  command: ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa -q
+
+- name: Turn SSH password authentication on
   lineinfile:
     path: /etc/ssh/sshd_config
     regexp: "^PasswordAuthentication"
@@ -87,19 +91,31 @@
     name: sshpass
     state: installed
 
-- name: Ensure passwordless login of user hadoop
+- name: Collect all public keys to node01
   become: yes
   become_user: hadoop
-  command: sshpass -p "123456" ssh-copy-id -o StrictHostKeyChecking=no node01
-
-- name: Copy public key on node01 to node02 and node03
-  become: yes
-  become_user: hadoop
-  command: "sshpass -p '123456' scp -o StrictHostKeyChecking=no /home/hadoop/.ssh/authorized_keys {{ item }}:/home/hadoop/.ssh/"
-  when: "inventory_hostname == 'node01.bigdata.com'"
+  command: sshpass -p "123456" ssh-copy-id -o StrictHostKeyChecking=no {{ item }}
   loop:
+    - node01
     - node02
     - node03
+
+- name: Turn SSH password authentication off
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^PasswordAuthentication"
+    line: "PasswordAuthentication no"
+
+- name: Turn SSH public key authentication on
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^PubKeyAuthentication"
+    line: "PubKeyAuthentication yes"
+
+- name: Restart sshd
+  service:
+    name: sshd
+    state: restarted
 
 - name: Copy jdk tarball to /bigdata/soft
   copy:
