@@ -119,7 +119,7 @@
 
 - name: Copy jdk tarball to /bigdata/soft
   copy:
-    src: ../../../jdk-8u141-linux-x64.tar.gz
+    src: ../../../tars/jdk-8u141-linux-x64.tar.gz
     dest: /bigdata/soft
     owner: hadoop
     group: hadoop
