@@ -45,12 +45,17 @@
     name: hadoop
     state: present
 
-- name: Add the user 'hadoop' and generate SSH key
+- name: Add the user 'hadoop'
   user:
     name: hadoop
     # ansible all -i localhost, -m debug -a "msg={{ '123456' | password_hash('sha512', 'mysecretsalt') }}"
     password: $6$mysecretsalt$ZB9R8AirQYAXhtfhOo2qdJz52FyNI6v3L6Uc3KNRP.arBKIYpcuEyQewT5qBAHoyQFwHkW6Z551Ql.cZ53GeY0
     group: hadoop
+    generate_ssh_key: yes
+    ssh_key_bits: 2048
+    ssh_key_file: /home/hadoop/.ssh/id_rsa
+    ssh_key_passphrase: ""
+    ssh_key_type: "rsa"
 
 - name: Make user 'hadoop' sudoer
   lineinfile:
@@ -69,11 +74,6 @@
   loop:
     - "/bigdata/soft" 
     - "/bigdata/install" 
-
-- name: Generate SSH key for hadoop on each machines
-  become: yes
-  become_user: hadoop
-  command: ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa -q
 
 - name: Turn SSH password authentication on
   lineinfile:
