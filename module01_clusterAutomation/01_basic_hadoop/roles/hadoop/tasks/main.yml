@@ -1,0 +1,38 @@
+---
+# This playbook installs Hadoop CDH 5.14.2 on node{01, 02, 03}
+
+- name: Extract hadoop to /bigdata/install
+  unarchive:
+    src: ../../../tars/hadoop-2.6.0-cdh5.14.2.tar.gz
+    dest: /bigdata/install
+    owner: hadoop
+    group: hadoop
+
+- name: Make sure openssl installed
+  yum:
+    name: openssl-devel
+    state: installed
+
+- name: Update core-site.xml
+
+- name: Update hdfs-site.xml
+
+- name: Export JAVA_HOME in hadoop-env.sh
+
+- name: Update mapred-site.xml
+
+- name: Update yarn-site.xml
+
+- name: Update slaves file
+
+- name: Create directories for hadoop
+
+- name: Export environment variables in /etc/profile
+
+- name: Format namenode on node01
+
+- name: Start DFS
+
+- name: Start YARN
+
+- name: Start history server

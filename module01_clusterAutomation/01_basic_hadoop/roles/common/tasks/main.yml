@@ -64,16 +64,13 @@
     regexp: '^hadoop'
     line: 'hadoop ALL=(ALL) NOPASSWD: ALL'
 
-- name: Create /bigdata/soft and /bigdata/install
+- name: Create /bigdata/install
   file:
-    path: "{{ item }}"
+    path: "/bigdata/install"
     state: directory
     owner: hadoop
     group: hadoop
     recurse: yes
-  loop:
-    - "/bigdata/soft" 
-    - "/bigdata/install" 
 
 - name: Turn SSH password authentication on
   lineinfile:
@@ -117,17 +114,9 @@
     name: sshd
     state: restarted
 
-- name: Copy jdk tarball to /bigdata/soft
-  copy:
-    src: ../../../tars/jdk-8u141-linux-x64.tar.gz
-    dest: /bigdata/soft
-    owner: hadoop
-    group: hadoop
-
 - name: Extract JDK to /bigdata/install
   unarchive:
-    src: /bigdata/soft/jdk-8u141-linux-x64.tar.gz
-    remote_src: yes
+    src: ../../../tars/jdk-8u141-linux-x64.tar.gz
     dest: /bigdata/install
     owner: hadoop
     group: hadoop
