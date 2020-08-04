@@ -1,0 +1,40 @@
+---
+# This playbook installs mysql server
+
+- hosts: mysql_server
+  become_user: root
+  become: yes
+  tasks:
+    - name: Enable MySQL repository
+      yum:
+        name: https://dev.mysql.com/get/mysql57-community-release-el7-9.noarch.rpm
+        state: installed
+    - name: Install MySQL server
+      yum:
+        name: mysql-community-server
+        validate_certs: no
+        state: installed
+    - name: Make sure mysqld service running
+      service:
+        name: mysqld
+        state: restarted
+    - name: Change mysql root password and keep track in 
+      shell: |
+        password_match=`awk '/A temporary password is generated for/ {a=$0} END{ print a }' /var/log/mysqld.log | awk '{print $(NF)}'`
+        echo $password_match
+        mysql -uroot -p$password_match --connect-expired-password -e "SET GLOBAL validate_password_policy=0; ALTER USER 'root'@'localhost' IDENTIFIED BY 'Passw0rd'; flush privileges; "
+      args:
+        creates: /root/.my.cnf
+      register: change_temp_pass
+      notify: restart mysqld
+    - name: Ensure skip grant tables
+      lineinfile:
+        path: /etc/my.cnf
+        line: skip-grant-tables
+        insertafter: '^\[mysqld\]'
+    - meta: flush_handlers
+  handlers:
+    - name: restart mysqld
+      service: 
+        name: mysqld 
+        state: restarted
